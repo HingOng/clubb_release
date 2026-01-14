@@ -870,6 +870,7 @@ module stats_variables
        iuprtp = 0, &
        ivpthlp = 0, &
        ivprtp = 0, &
+       ivpup = 0, &
        iupthvp = 0, &
        iuprcp = 0, &
        ivpthvp = 0, &

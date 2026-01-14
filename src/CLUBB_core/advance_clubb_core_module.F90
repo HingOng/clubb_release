@@ -659,7 +659,8 @@ module advance_clubb_core_module
 
     real( kind = core_rknd ), dimension(ngrdcol,nzm) :: &
       rtprcp, & ! rt'rc'               [kg^2/kg^2]
-      rcp2      ! rc'^2                [kg^2/kg^2]
+      rcp2,   & ! rc'^2                [kg^2/kg^2]
+      vpup      ! v'u'                 [m^2/s^2]
 
     real( kind = core_rknd ), dimension(ngrdcol,nzt) :: &
       wpthlp2,   & ! w'thl'^2    [m K^2/s]
@@ -1967,7 +1968,7 @@ module advance_clubb_core_module
                             stats_metadata,                                        & ! intent(in)
                             stats_zt, stats_zm, stats_sfc,                         & ! intent(i/o)
                             rtm, wprtp, thlm, wpthlp,                              & ! intent(i/o)
-                            sclrm, wpsclrp, um, upwp, vm, vpwp,                    & ! intent(i/o)
+                            sclrm, wpsclrp, um, upwp, vm, vpwp, vpup,              & ! intent(i/o)
                             um_pert, vm_pert, upwp_pert, vpwp_pert, err_info )       ! intent(i/o)
 
       if ( clubb_at_least_debug_level_api( 0 ) ) then
@@ -2017,7 +2018,7 @@ module advance_clubb_core_module
                              invrs_tau_xp2_zm, invrs_tau_C4_zm,                   & ! intent(in)
                              invrs_tau_C14_zm, wm_zm,                             & ! intent(in)
                              rtm, wprtp, thlm, wpthlp, wpthvp, um, vm,            & ! intent(in)
-                             wp2, wp2_zt, wp3, upwp, vpwp,                        & ! intent(in)
+                             wp2, wp2_zt, wp3, upwp, vpwp, vpup,                  & ! intent(in)
                              sigma_sqd_w, wprtp2, wpthlp2,                        & ! intent(in)
                              wprtpthlp, Kh_zt, rtp2_forcing,                      & ! intent(in)
                              thlp2_forcing, rtpthlp_forcing,                      & ! intent(in)
@@ -2025,7 +2026,7 @@ module advance_clubb_core_module
                              thv_ds_zm, cloud_frac,                               & ! intent(in)
                              wp3_on_wp2, wp3_on_wp2_zt,                           & ! intent(in)
                              pdf_implicit_coefs_terms,                            & ! intent(in)
-                             dt_advance, fcor_y,                                  & ! intent(in)
+                             dt_advance, fcor_y, fcor,                            & ! intent(in)
                              sclrm, wpsclrp,                                      & ! intent(in)
                              wpsclrp2, wpsclrprtp, wpsclrpthlp,                   & ! intent(in)
                              lhs_splat_wp2,                                       & ! intent(in)
@@ -2035,6 +2036,7 @@ module advance_clubb_core_module
                              clubb_config_flags%fill_holes_type,                  & ! intent(in)
                              clubb_config_flags%l_predict_upwp_vpwp,              & ! intent(in)
                              clubb_config_flags%l_ho_nontrad_coriolis,            & ! intent(in)
+                             clubb_config_flags%l_ho_trad_coriolis,               & ! intent(in)
                              clubb_config_flags%l_min_xp2_from_corr_wx,           & ! intent(in)
                              clubb_config_flags%l_C2_cloud_frac,                  & ! intent(in)
                              clubb_config_flags%l_upwind_xpyp_ta,                 & ! intent(in)

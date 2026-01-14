@@ -92,7 +92,7 @@ module advance_xm_wpxp_module
                               stats_metadata, &
                               stats_zt, stats_zm, stats_sfc, &
                               rtm, wprtp, thlm, wpthlp, &
-                              sclrm, wpsclrp, um, upwp, vm, vpwp, &
+                              sclrm, wpsclrp, um, upwp, vm, vpwp, vpup, &
                               um_pert, vm_pert, upwp_pert, vpwp_pert, err_info )
 
     ! Description:
@@ -382,7 +382,8 @@ module advance_xm_wpxp_module
 
     real( kind = core_rknd ), intent(inout), dimension(ngrdcol,nzm) ::  & 
       upwp, & ! <u'w'>:  momentum flux (momentum levels)               [m^2/s^2]
-      vpwp    ! <v'w'>:  momentum flux (momentum levels)               [m^2/s^2]
+      vpwp, & ! <v'w'>:  momentum flux (momentum levels)               [m^2/s^2]
+      vpup    ! <v'u'>:  momentum flux (momentum levels)               [m^2/s^2]
 
     ! Variables used to track perturbed version of winds.
     real( kind = core_rknd ), dimension(ngrdcol,nzt), intent(inout) :: &
@@ -916,7 +917,7 @@ module advance_xm_wpxp_module
                                           stats_metadata,                                  & ! In
                                           stats_zt, stats_zm, stats_sfc,                   & ! In
                                           rtm, wprtp, thlm, wpthlp,                        & ! InOut
-                                          sclrm, wpsclrp, um, upwp, vm, vpwp,              & ! InOut
+                                          sclrm, wpsclrp, um, upwp, vm, vpwp, vpup,        & ! InOut
                                           um_pert, vm_pert, upwp_pert, vpwp_pert, err_info ) ! InOut
     end if ! ( ( iiPDF_type == iiPDF_new ) .and. ( .not. l_explicit_turbulent_adv_wpxp ) )
 
@@ -2680,7 +2681,7 @@ module advance_xm_wpxp_module
                                             stats_metadata, &
                                             stats_zt, stats_zm, stats_sfc, &
                                             rtm, wprtp, thlm, wpthlp, &
-                                            sclrm, wpsclrp, um, upwp, vm, vpwp, &
+                                            sclrm, wpsclrp, um, upwp, vm, vpwp, vpup, &
                                             um_pert, vm_pert, upwp_pert, vpwp_pert, err_info )
     !
     ! Description: This subroutine solves all xm_wpxp when all the LHS matrices are equal.
@@ -2919,7 +2920,8 @@ module advance_xm_wpxp_module
 
     real( kind = core_rknd ), intent(inout), dimension(ngrdcol,nzm) :: &
       upwp, & ! <u'w'>:  momentum flux (momentum levels)               [m^2/s^2]
-      vpwp    ! <v'w'>:  momentum flux (momentum levels)               [m^2/s^2]
+      vpwp, & ! <v'w'>:  momentum flux (momentum levels)               [m^2/s^2]
+      vpup    ! <v'u'>:  momentum flux (momentum levels)               [m^2/s^2]
 
     ! Variables used to track perturbed version of winds.
     real( kind = core_rknd ), dimension(ngrdcol,nzt), intent(inout) :: &
@@ -3271,6 +3273,10 @@ module advance_xm_wpxp_module
                           C6rt_Skw_fnc, tau_C6_zm, C7_Skw_fnc,              & ! Intent(in)
                           vprtp )                                            ! Intent(out)
 
+      call diagnose_upxp( nzm, nzt, ngrdcol, gr, vpwp, um_smth, upwp, vm_smth, & ! Intent(in)
+                          C6thl_Skw_fnc, tau_C6_zm, C7_Skw_fnc,                & ! Intent(in)
+                          vpup )                                                 ! Intent(out)
+
       if ( l_perturbed_wind ) then
 
          call diagnose_upxp( nzm, nzt, ngrdcol, gr, upwp_pert, thlm, wpthlp, um_pert, & ! In
@@ -3290,6 +3296,21 @@ module advance_xm_wpxp_module
                              vprtp_pert )                                             ! Out
 
       endif ! l_perturbed_wind
+
+      ! Add optional nontraditional Coriolis term for <v'w'>
+      ! Hing Ong, 13 January 2026
+      if ( l_ho_nontrad_coriolis ) then
+
+        !$acc parallel loop gang vector collapse(2) default(present)
+        do k = 1, nzm
+          do i = 1, ngrdcol
+            vpwp_forcing(i,k) = vpwp_forcing(i,k) + fcor_y(i) * vpup(i,k)
+          end do
+        end do
+        !$acc end parallel loop
+
+      end if ! l_ho_nontrad_coriolis
+
 
       ! Use a crude approximation for buoyancy terms <u'thv'> and <v'thv'>.
       !upthvp = upwp * wpthvp / max( wp2, w_tol_sqd )
@@ -3346,6 +3367,9 @@ module advance_xm_wpxp_module
                                 stats_zm(i) )             ! intent(inout)
           call stat_update_var( stats_metadata%ivprtp,  & ! intent(in)
                                 vprtp(i,:),             & ! intent(in)
+                                stats_zm(i) )             ! intent(inout)
+          call stat_update_var( stats_metadata%ivpup,   & ! intent(in)
+                                vpup(i,:),              & ! intent(in)
                                 stats_zm(i) )             ! intent(inout)
           call stat_update_var( stats_metadata%iupthvp, & ! intent(in)
                                 upthvp(i,:),            & ! intent(in)

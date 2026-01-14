@@ -1390,7 +1390,7 @@ module clubb_driver
     zm_top = zm_top_nl
     p_sfc = p_sfc_nl
     T_sfc = T_sfc_nl
-    fcor = fcor_nl
+    !fcor = fcor_nl
 
     ! Suppose the vector Coriolis term is written as 2*Omega_vector x v_vector, where 
     ! Omega_vector is the Earth's angular velocity vector (omega_planet in code), which 
@@ -1404,7 +1404,7 @@ module clubb_driver
 
     ! fcor could reasonably be defined as below, but currently it is input via namelist
     ! Hing Ong, 25 November 2025
-    !fcor   = two * omega_planet * sin ( lat_vals * radians_per_deg )
+    fcor   = two * omega_planet * sin ( lat_vals * radians_per_deg )
 
     open(unit=iunit, file=runfile, status='old', action='read')
     read(unit=iunit, nml=configurable_clubb_flags_nl)

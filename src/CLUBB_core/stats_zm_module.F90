@@ -581,6 +581,12 @@ module stats_zm_module
              var_description="v'rt', Northward total water flux", &
              var_units="(m/s)(kg/kg)", l_silhs=.false., grid_kind=stats_zm )
         k = k + 1
+      case ('vpup')
+        stats_metadata%ivpup = k
+        call stat_assign( var_index=stats_metadata%ivpup, var_name="vpup", &
+             var_description="v'u', Northward u flux", &
+             var_units="(m^2/s^2)", l_silhs=.false., grid_kind=stats_zm )
+        k = k + 1
       case ('upthvp')
         stats_metadata%iupthvp = k
         call stat_assign( var_index=stats_metadata%iupthvp, var_name="upthvp", &

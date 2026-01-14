@@ -297,6 +297,7 @@ module spurious_source_test
     real( kind = core_rknd ), dimension(1,nzm) :: &
       upwp,       & ! <u'w'>:  momentum flux (momentum levels)               [m^2/s^2]
       vpwp,       & ! <v'w'>:  momentum flux (momentum levels)               [m^2/s^2]
+      vpup,       & ! <v'u'>:  momentum flux (momentum levels)               [m^2/s^2]
       uprcp,      & ! < u' r_c' >                                            [(m kg)/(s kg)]
       vprcp,      & ! < v' r_c' >                                            [(m kg)/(s kg)]
       rc_coef_zm    ! Coefficient on X'r_c' in X'th_v' equation              [K/(kg/kg)]
@@ -934,6 +935,7 @@ module spurious_source_test
        vm(1,:) = zero
        upwp(1,:) = zero
        vpwp(1,:) = zero
+       vpup(1,:) = zero
        ! Variables used to track perturbed version of winds.
        um_pert(1,:) = zero
        vm_pert(1,:) = zero
@@ -1016,7 +1018,7 @@ module spurious_source_test
                              stats_metadata, &
                              stats_zt, stats_zm, stats_sfc, &
                              rtm, wprtp, thlm, wpthlp, &
-                             sclrm, wpsclrp, um, upwp, vm, vpwp, &
+                             sclrm, wpsclrp, um, upwp, vm, vpwp, vpup, &
                              um_pert, vm_pert, upwp_pert, vpwp_pert, err_info_dummy )
 
        ! Calculate the spurious source for rtm

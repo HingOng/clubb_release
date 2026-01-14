@@ -51,7 +51,7 @@ module advance_xp2_xpyp_module
                                invrs_tau_xp2_zm, invrs_tau_C4_zm,         & ! In
                                invrs_tau_C14_zm, wm_zm,                   & ! In
                                rtm, wprtp, thlm, wpthlp, wpthvp, um, vm,  & ! In
-                               wp2, wp2_zt, wp3, upwp, vpwp,              & ! In
+                               wp2, wp2_zt, wp3, upwp, vpwp, vpup,        & ! In
                                sigma_sqd_w, wprtp2, wpthlp2,              & ! In
                                wprtpthlp, Kh_zt, rtp2_forcing,            & ! In
                                thlp2_forcing, rtpthlp_forcing,            & ! In
@@ -59,7 +59,7 @@ module advance_xp2_xpyp_module
                                thv_ds_zm, cloud_frac,                     & ! In
                                wp3_on_wp2, wp3_on_wp2_zt,                 & ! In
                                pdf_implicit_coefs_terms,                  & ! In
-                               dt, fcor_y,                                & ! In
+                               dt, fcor_y, fcor,                          & ! In
                                sclrm, wpsclrp,                            & ! In
                                wpsclrp2, wpsclrprtp, wpsclrpthlp,         & ! In
                                lhs_splat_wp2,                             & ! In
@@ -69,6 +69,7 @@ module advance_xp2_xpyp_module
                                fill_holes_type,                           & ! In
                                l_predict_upwp_vpwp,                       & ! In
                                l_ho_nontrad_coriolis,                     & ! In
+                               l_ho_trad_coriolis,                        & ! In
                                l_min_xp2_from_corr_wx,                    & ! In
                                l_C2_cloud_frac,                           & ! In
                                l_upwind_xpyp_ta,                          & ! In
@@ -215,6 +216,7 @@ module advance_xp2_xpyp_module
       wp2,              & ! <w'^2> (momentum levels)              [m^2/s^2]
       upwp,             & ! <u'w'> (momentum levels)              [m^2/s^2]
       vpwp,             & ! <v'w'> (momentum levels)              [m^2/s^2]
+      vpup,             & ! <v'u'> (momentum levels)              [m^2/s^2]
       sigma_sqd_w,      & ! sigma_sqd_w (momentum levels)         [-]
       rtp2_forcing,     & ! <r_t'^2> forcing (momentum levels)    [(kg/kg)^2/s]
       thlp2_forcing,    & ! <th_l'^2> forcing (momentum levels)   [K^2/s]
@@ -246,8 +248,10 @@ module advance_xp2_xpyp_module
       dt             ! Model timestep                                [s]
 
     real( kind = core_rknd ), dimension(ngrdcol), intent(in) ::  &
-      fcor_y             ! Nontraditional Coriolis parameter         [s^-1]
+      fcor_y,          & ! Nontraditional Coriolis parameter         [s^-1]
                          ! Meridional planetary vorticity. Proportional to cos(latitude)
+      fcor               ! Traditional    Coriolis parameter         [s^-1]
+                         ! Vertical   planetary vorticity. Proportional to sin(latitude)
 
     ! Passive scalar input
     real( kind = core_rknd ), intent(in), dimension(ngrdcol,nzt,sclr_dim) :: &
@@ -284,6 +288,8 @@ module advance_xp2_xpyp_module
                                 ! <u> and <v> are advanced in subroutine advance_windm_edsclrm.
       l_ho_nontrad_coriolis,  & ! Flag to implement the nontraditional Coriolis terms in the
                                 ! prognostic equations of <w'w'>, <u'w'>, and <u'u'>.
+      l_ho_trad_coriolis,     & ! Flag to implement the traditional Coriolis terms in the
+                                ! prognostic equations of <u'w'> and <v'w'>.
       l_min_xp2_from_corr_wx, & ! Flag to base the threshold minimum value of xp2 (rtp2 and thlp2)
                                 ! on keeping the overall correlation of w and x within the limits
                                 ! of -max_mag_correlation_flux to max_mag_correlation_flux.
@@ -783,6 +789,21 @@ module advance_xp2_xpyp_module
 
       end if ! l_ho_nontrad_coriolis
 
+      if ( l_ho_trad_coriolis ) then
+
+        ! Add the traditional Coriolis term
+        ! Hing Ong, 13 January 2025
+        !$acc parallel loop gang vector collapse(2) default(present)
+        do k = 1, nzm
+          do i = 1, ngrdcol
+            uv_rhs(i,k,1) = uv_rhs(i,k,1) + two * fcor(i) * vpup(i,k)
+          end do
+        end do
+        !$acc end parallel loop
+
+      end if ! l_ho_trad_coriolis
+
+
       ! Solve the tridiagonal system
        call xp2_xpyp_solve( nzm, ngrdcol, xp2_xpyp_up2_vp2, 1, & ! Intent(in)
                             gr, tridiag_solve_method,          & ! Intent(in)
@@ -825,6 +846,20 @@ module advance_xp2_xpyp_module
                             stats_metadata, & ! In
                             stats_zm, & ! intent(inout)
                             uv_rhs(:,:,1) ) ! Out
+
+      if ( l_ho_trad_coriolis ) then
+
+        ! Add the traditional Coriolis term
+        ! Hing Ong, 13 January 2025
+        !$acc parallel loop gang vector collapse(2) default(present)
+        do k = 1, nzm
+          do i = 1, ngrdcol
+            uv_rhs(i,k,1) = uv_rhs(i,k,1) - two * fcor(i) * vpup(i,k)
+          end do
+        end do
+        !$acc end parallel loop
+
+      end if ! l_ho_trad_coriolis
 
       ! Solve the tridiagonal system
       call xp2_xpyp_solve( nzm, ngrdcol, xp2_xpyp_up2_vp2, 1, & ! Intent(in)

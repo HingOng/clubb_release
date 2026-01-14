@@ -3274,7 +3274,7 @@ module advance_xm_wpxp_module
                           vprtp )                                            ! Intent(out)
 
       call diagnose_upxp( nzm, nzt, ngrdcol, gr, vpwp, um_smth, upwp, vm_smth, & ! Intent(in)
-                          C6thl_Skw_fnc, tau_C6_zm, C7_Skw_fnc,                & ! Intent(in)
+                          C6thl_Skw_fnc, tau_C6_zm, zeros_vector,              & ! Intent(in)
                           vpup )                                                 ! Intent(out)
 
       if ( l_perturbed_wind ) then

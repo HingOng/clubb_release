@@ -3273,9 +3273,49 @@ module advance_xm_wpxp_module
                           C6rt_Skw_fnc, tau_C6_zm, C7_Skw_fnc,              & ! Intent(in)
                           vprtp )                                            ! Intent(out)
 
+      ! Add optional nontraditional Coriolis term for <u'v'>
+      if ( l_ho_nontrad_coriolis ) then
+
+        !$acc parallel loop gang vector collapse(2) default(present)
+        do k = 1, nzm
+          do i = 1, ngrdcol
+            um_smth(i,k) = um_smth(i,k) + fcor_y(i) * gr%zt(i,k) ! "absolute" um_smth
+          end do
+        end do
+        !$acc end parallel loop
+
+      end if ! l_ho_nontrad_coriolis
+      ! There is no need to create another variable for the absolute um_smth
+      ! because the following "call diagnose_upxp" is the last step using um_smth.
+      ! Hing Ong, 15 January 2026
+
       call diagnose_upxp( nzm, nzt, ngrdcol, gr, vpwp, um_smth, upwp, vm_smth, & ! Intent(in)
                           C6thl_Skw_fnc, tau_C6_zm, zeros_vector,              & ! Intent(in)
                           vpup )                                                 ! Intent(out)
+
+      ! Add optional traditional Coriolis term for <u'v'>
+      if ( l_ho_trad_coriolis ) then
+
+        !$acc parallel loop gang vector collapse(2) default(present)
+        do k = 2, nzm-1
+          do i = 1, ngrdcol
+            vpup(i,k) = vpup(i,k) + ( tau_C6_zm(i,k) / C6thl_Skw_fnc(i,k) ) &
+                                  * fcor(i) * ( vp2(i,k) - up2(i,k) )
+          end do
+        end do
+        !$acc end parallel loop
+
+        ! The value of ypxp is irrelevant to the calculations at the upper and
+        ! lower boundaries
+        !$acc parallel loop gang vector default(present)
+        do i = 1, ngrdcol
+          vpup(i,gr%k_lb_zm) = 0.0_core_rknd
+          vpup(i,gr%k_ub_zm) = 0.0_core_rknd
+        end do
+        !$acc end parallel loop
+
+      end if ! l_ho_trad_coriolis
+      ! Hing Ong, 15 January 2026
 
       if ( l_perturbed_wind ) then
 
